@@ -3,217 +3,36 @@
 ;  ---------------------------------------------
 (defmodule AGENT (import MAIN ?ALL) (import ENV ?ALL) (export ?ALL))
 
-
-
-
-(defrule inerzia0 (declare (salience 10))
-	(status (step ?s)(currently running))
-	(moves (fires 0) (guesses ?ng&:(> ?ng 0)))
+(defrule print-rows-i-know
+	(k-per-row (row ?r) (num ?n))
 =>
-	(assert (exec (step ?s) (action guess) (x 0) (y 0)))
-     (pop-focus)
-
+	(printout t "I know that row " ?r ", contains " ?n " pieces." crlf)
 )
 
-(defrule inerzia0-bis (declare (salience 10))
-	(status (step ?s)(currently running))
-	(moves (guesses 0))
+(defrule print-columns-i-know
+	(k-per-col (col ?c) (num ?n))
 =>
-	(assert (exec (step ?s) (action unguess) (x 0) (y 0)))
-     (pop-focus)
-
+	(printout t "I know that col " ?c ", contains " ?n " pieces." crlf)
 )
 
-
-
-(defrule inerzia
+(defrule guess-1 ; se c'è una cella nota che contiene un sottomarino, allora mettici la guess. PROBLEMA, LO ESEGUE 20 VOLTE, È SEMPRE ATTIVABILE (perchè ho 20 guess a disposizione, vorrei eseguirla solo uan volta)
 	(status (step ?s)(currently running))
-	(not (exec  (action fire) (x 5) (y 4)) )
-=>
-	(assert (exec (step ?s) (action fire) (x 5) (y 4)))
-     (pop-focus)
-)
-
-(defrule inerzia-a
-	(status (step ?s)(currently running))
-	(not (exec  (action guess) (x 5) (y 4)) )
-=>
-	(assert (exec (step ?s) (action guess) (x 5) (y 4)))
-     (pop-focus)
-)
-(defrule inerzia-a-2
-	(status (step ?s)(currently running))
-	(not (exec  (action guess) (x 6) (y 4)) )
-=>
-	(assert (exec (step ?s) (action guess) (x 6) (y 4)))
-     (pop-focus)
-)
-
-(defrule inerzia-a-3
-	(status (step ?s)(currently running))
-	(not (exec  (action guess) (x 7) (y 4)) )
+	(k-cell (x ?x)(y ?y)(content sub))
+	(not (exec (action guess) (x ?x) (y ?y))) ; questo dovrebbe risovlere il problema ma non funziona
 =>
 	(assert (exec (step ?s) (action guess) (x 7) (y 4)))
-     (pop-focus)
-)
-
-
-(defrule inerzia1
-	(status (step ?s)(currently running))
-	(not (exec  (action fire) (x 2) (y 5)))
-=>
-
-
-	(assert (exec (step ?s) (action fire) (x 2) (y 5)))
-     (pop-focus)
-
-)
-
-(defrule inerzia2
-	(status (step ?s)(currently running))
-	(not (exec  (action fire) (x 2) (y 6)))
-
-=>
-
-	(assert (exec (step ?s) (action fire) (x 2) (y 6)))
-     (pop-focus)
-
-)
-
-(defrule inerzia3
-	(status (step ?s)(currently running))
-	(not (exec  (action fire) (x 1) (y 2)))
-
-=>
-	(assert (exec (step ?s) (action fire) (x 1) (y 2)))
-     (pop-focus)
-)
-
-
-(defrule inerzia4
-	(status (step ?s)(currently running))
-	(not (exec (action fire) (x 7) (y 5)))
-=>
-
-	(assert (exec (step ?s) (action fire) (x 7) (y 5)))
-     (pop-focus)
-)
-
-
-
-(defrule inerzia5
-	(status (step ?s)(currently running))
-
-	(not (exec (action fire) (x 8) (y 3)))
-=>
-
-
-
-	(assert (exec (step ?s) (action fire) (x 8) (y 3)))
-     (pop-focus)
-
-
-)
-
-
-(defrule inerzia6
-	(status (step ?s)(currently running))
-		(not (exec  (action fire) (x 8) (y 4)))
-=>
-
-
-	(assert (exec (step ?s) (action fire) (x 8) (y 4)))
-     (pop-focus)
-
-	)
-
-
-
-
-
-(defrule inerzia7
-	(status (step ?s)(currently running))
-		(not (exec  (action fire) (x 8) (y 5)))
-=>
-
-
-	(assert (exec (step ?s) (action fire) (x 8) (y 5)))
-     (pop-focus)
-
-)
-
-
-(defrule inerzia8
-	(status (step ?s)(currently running))
-		(not (exec  (action fire) (x 6) (y 9)))
-=>
-
-
-	(assert (exec (step ?s) (action fire) (x 6) (y 9)))
-     (pop-focus)
-)
-
-
-(defrule inerzia9
-	(status (step ?s)(currently running))
-		(not (exec  (action fire) (x 7) (y 9)))
-=>
-
-
-	(assert (exec (step ?s) (action fire) (x 7) (y 9)))
-     (pop-focus)
-)
-
-(defrule inerzia10 (declare (salience 30))
-	(status (step ?s)(currently running))
-		(not (exec  (action fire) (x 6) (y 4)))
-=>
-
-
-	(assert (exec (step ?s) (action fire) (x 6) (y 4)))
-     (pop-focus)
-)
-
-(defrule inerzia11 (declare (salience 30))
-	(status (step ?s)(currently running))
-		(not (exec  (action guess) (x 6) (y 5)))
-=>
-
-
-	(assert (exec (step ?s) (action guess) (x 6) (y 5)))
-     (pop-focus)
-)
-
-
-(defrule inerzia20 (declare (salience 30))
-	(status (step ?s)(currently running))
-	(not (exec  (action guess) (x 1) (y 3)))
-=>
-
-
-	(assert (exec (step ?s) (action guess) (x 1) (y 3)))
-     (pop-focus)
-
-)
-
-(defrule inerzia21  (declare (salience 30))
-	(status (step ?s)(currently running))
-	(not (exec  (action guess) (x 1) (y 4)))
-=>
-
-
-	(assert (exec (step ?s) (action guess) (x 1) (y 4)))
-     (pop-focus)
-
+	(assert (k-cell (x ?x) (y ?y) (content water)))
+	(printout t "guess in pos [" ?x ", " ?y "] at step" ?s crlf)
+    (pop-focus)
 )
 
 
 
 
-
-(defrule print-what-i-know-since-the-beginning
-	(k-cell (x ?x) (y ?y) (content ?t) )
-=>
-	(printout t "I know that cell [" ?x ", " ?y "] contains " ?t "." crlf)
-)
-
+; idea per sttrategia da implementare:
+; - se ci sono caselle note che contengono una barca/pezzo di barca, contrassegnale come guessed
+; - non fare guess su caselle che sono all'intersezione di righe colonne entrambe con 0 su (k-per-col, k-per-row)
+; - fai le fire sulle caselle in cui l'intersezione è maggiore
+; - se da una fire viene fuori che la casella contiene un pezzo di barca, fai guess
+; - se al passo n hai fatto fire e hai scoperto che c'è un pezzo di barca, ai passi successivi fai guess nelle caselle adiacenti
+; - usa fire per decidere quale delle guess messe è quella che contiene un pezzo di barca.

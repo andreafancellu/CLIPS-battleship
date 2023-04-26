@@ -2,14 +2,14 @@
 
 ;;template che rappresenta la mossa eseguita al passo ?step
 (deftemplate exec
-   (slot step)
+   (slot step) ; quando arriva a 100 arresta l'esecuzione
    (slot action (allowed-values fire guess unguess solve))
    (slot x) ;;non usato nel caso del comando solve
    (slot y) ;;non usato nel caso del comando solve
 )
 
 ;;stato corrente dell'esecuzione
-(deftemplate status (slot step) (slot currently (allowed-values running stopped)) )
+(deftemplate status (slot step) (slot currently (allowed-values running stopped)) ) 
 
 ;;numero di mosse ancora disponibili (tra fire e guess)
 (deftemplate moves (slot fires) (slot guesses) )

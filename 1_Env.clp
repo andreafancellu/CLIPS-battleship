@@ -1,5 +1,5 @@
 (defmodule ENV (import MAIN ?ALL) (export deftemplate k-cell k-per-row  k-per-col))
-
+; template k sono cose note all'agente fin dal principio
 
 (deftemplate cell
 	(slot x)
@@ -14,7 +14,7 @@
 	(slot x)
 	(multislot ys)
 	(slot size)
-	(multislot status (allowed-values safe hit))
+	(multislot status (allowed-values safe hit)) ; ciascun valore rappresenta lo stato di ciascun pezzo della nave
 )
 
 
@@ -27,22 +27,23 @@
 )
 
 
-(deftemplate k-cell 
+(deftemplate k-cell ; esportate come osservazioni, dalle fire
 	(slot x)
 	(slot y)
 	(slot content (allowed-values water left right middle top bot sub))
 )
 
-(deftemplate k-per-row
+(deftemplate k-per-row ; numero di celle occupate per riga, noto a priori
 	(slot row)
 	(slot num)
 )
 
-(deftemplate k-per-col
+(deftemplate k-per-col ; numero di celle occupata per colonna, noto a priori
 	(slot col)
 	(slot num)
 )
 
+;; ---------- AZIONI CHE MODELLANO L'AMBIENTE, NON MODIFICARE ---------- 
 
 (defrule action-fire 
         ?us <- (status (step ?s) (currently running))
