@@ -115,7 +115,7 @@
 )
 
 ;metto content water a tutte le celle sulle righe con 0 navi all'interno
-(defrule set_water_rows  (declare (salience 20))
+(defrule set_water_rows  (declare (salience 100))
 	(k-per-row (row ?r) (num ?n))
 	(test(= ?n 0))
 	?cell <- (my_cell (x ?r) (y ?y) (content unknown) (status none))
@@ -123,7 +123,7 @@
 	(modify ?cell (content water))
 )
 ;metto content water a tutte le celle sulle colonne con 0 navi all'interno
-(defrule set_water_cols (declare (salience 20))
+(defrule set_water_cols (declare (salience 100))
 	(k-per-col (col ?c) (num ?n))
 	(test(= ?n 0))
 	?cell <- (my_cell (x ?x) (y ?c) (content unknown) (status none))
@@ -132,9 +132,65 @@
 )
 
 (defrule print_my_board (declare (salience 5))
-	(my_cell (x ?x) (y ?y) (content ?c) (status none))
+	(my_cell (x ?x) (y ?y) (content ?c) (status ?s))
 =>
 	(printout t "Mycell: " ?x " - " ?y " is: " ?c "." crlf)
+)
+
+(defrule guess-known (declare (salience 100)); se c'è una cella nota che contiene un sottomarino, allora mettici la guess. ESEGUE 20 VOLTE (perchè ho 20 esecuzioni per la guess)
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content sub | bot | middle | top))
+	(not (exec  (action guess) (x ?x) (y ?y)))
+	?cell <- (my_cell (x ?x) (y ?y) (content unknown) (status none))
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+=>
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	
+	(modify ?cell (content boat) (status guessed))
+
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-known in pos [" ?x ", " ?y "] at step" ?s  crlf)
+    (pop-focus)
+)
+
+(defrule guess-from-bot (declare (salience 10))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content bot))
+	(not (exec (action guess) (x = (- ?x 1)) (y ?y)))
+	?cell <- (my_cell (x = (- ?x 1)) (y ?y) (content unknown) (status none))
+	?nrow <- (k-per-row (row = (- ?x 1)) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+=>
+	(bind ?x (- ?x 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?cell (content boat) (status guessed))
+	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-from-bot in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+
+
+(defrule print-rows-i-know
+	(k-per-row (row ?r) (num ?n))
+=>
+	(printout t "I know that row " ?r ", contains " ?n " pieces." crlf)
+)
+
+(defrule print-columns-i-know
+	(k-per-col (col ?c) (num ?n))
+=>
+	(printout t "I know that col " ?c ", contains " ?n " pieces." crlf)
 )
 
 ; idea per strategia da implementare:
