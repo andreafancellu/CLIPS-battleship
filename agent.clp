@@ -10,19 +10,30 @@
 	(slot content (allowed-values unknown water boat hit-boat))
 	(slot status (allowed-values none guessed fired missed))
 )
-
+(deftemplate navy
+	(slot submarines)
+	(slot destroyers)
+	(slot cruisers)
+	(slot battleship)
+)
 (deftemplate max_n
 	(slot maxr)
 	(slot indexr)
 	(slot maxc)
 	(slot indexc)
 )
-
 (deftemplate n_actions
 	(slot n_guess)
 	(slot n_fire)
 )
 
+
+(deffacts game_navy
+	(submarines 4)
+	(destroyers 3)
+	(cruisers 2)
+	(battleship 1)
+)
 
 (deffacts utils-stats
 	(max_n (maxr 0) (indexr 0) (maxc 0) (indexc 0))
@@ -137,7 +148,7 @@
 
 
 ; ------------------------------ UTILS ------------------------------
-
+; TODO: aggiornamento valore massimo
 (defrule check-max-row (declare (salience 20))
 	?max <- (max_n (maxr ?mr) (indexr ?idxr))
 	(k-per-row (row ?r) (num ?n &:(> ?n ?mr)))
@@ -179,7 +190,7 @@
 
 
 ; ------------------------------ GUESS ------------------------------
-
+; TODO: aggiornare valore massimo dopo ogni guess (rimetterlo a 0 per poi ricalcolarlo nel next step)
 (defrule guess-known (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content bot | middle | top | left | right))
@@ -306,8 +317,147 @@
     (pop-focus)
 )
 
+(defrule guess-down-from-middle (declare (salience 10))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?parent <- (my-cell (x = (- ?x 1))(y ?y)(status guessed))
+	(not (exec (action guess) (x = (+ ?x 1)) (y ?y)))
+	?child <- (my-cell (x = (+ ?x 1)) (y ?y) (content unknown) (status none))
+	?nrow <- (k-per-row (row =(+ ?x 1)) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+=>
+	(bind ?x (+ ?x 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?child (content boat) (status guessed))
+	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-down-from-middle in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+(defrule guess-up-from-middle (declare (salience 10))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?parent <- (my-cell (x = (+ ?x 1))(y ?y)(status guessed))
+	(not (exec (action guess) (x = (- ?x 1)) (y ?y)))
+	?child <- (my-cell (x = (- ?x 1)) (y ?y) (content unknown) (status none))
+	?nrow <- (k-per-row (row =(- ?x 1)) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+=>
+	(bind ?x (- ?x 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?child (content boat) (status guessed))
+	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-up-from-middle in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+(defrule guess-left-from-middle (declare (salience 10))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?parent <- (my-cell (x ?x)(y = (+ ?y 1))(status guessed))
+	(not (exec (action guess) (x ?x) (y = (- ?y 1))))
+	?child <- (my-cell (x ?x) (y = (- ?y 1)) (content unknown) (status none))
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col = (- ?y 1)) (num ?nc))
+=>
+	(bind ?y (- ?y 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?child (content boat) (status guessed))
+	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-left-from-middle in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+(defrule guess-right-from-middle (declare (salience 10))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?parent <- (my-cell (x ?x)(y = (- ?y 1))(status guessed))
+	(not (exec (action guess) (x ?x) (y = (+ ?y 1))))
+	?child <- (my-cell (x ?x) (y = (+ ?y 1)) (content unknown) (status none))
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col = (+ ?y 1)) (num ?nc))
+=>
+	(bind ?y (+ ?y 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?child (content boat) (status guessed))
+	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-right-from-middle in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
 
 ; ------------------------------ FIRE ------------------------------
+(defrule fire-down-from-top
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content top))
+	(my-cell (x = (+ ?x 2)) (y ?y) (content unknown) (status none))
+	(not (exec (action fire|guess) (x = (+ ?x 2)) (y ?y)))
+=>
+	(bind ?x (+ ?x 2)) 
+	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	
+	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+	(pop-focus)
+)
+
+(defrule fire-up-from-bot
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content bot))
+	(my-cell (x = (- ?x 2)) (y ?y) (content unknown) (status none))
+	(not (exec (action fire|guess) (x = (- ?x 2)) (y ?y)))
+=>
+	(bind ?x (- ?x 2)) 
+	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	
+	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+	(pop-focus)
+)
+
+(defrule fire-left-from-right
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content right))
+	(my-cell (x ?x) (y = (- ?y 2)) (content unknown) (status none))
+	(not (exec (action fire|guess) (x ?x) (y = (- ?y 2))))
+=>
+	(bind ?y (- ?y 2)) 
+	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	
+	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+	(pop-focus)
+)
+
+(defrule fire-right-from-left
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content right))
+	(my-cell (x ?x) (y = (+ ?y 2)) (content unknown) (status none))
+	(not (exec (action fire|guess) (x ?x) (y = (+ ?y 2))))
+=>
+	(bind ?y (+ ?y 2)) 
+	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	
+	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+	(pop-focus)
+)
+
 
 (defrule fire-most-likelihood-cell 
 	?max <- (max_n (indexr ?x) (indexc ?y))
