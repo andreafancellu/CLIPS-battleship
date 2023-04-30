@@ -43,7 +43,6 @@
 	(slot num)
 )
 
-;; ---------- AZIONI CHE MODELLANO L'AMBIENTE, NON MODIFICARE ---------- 
 
 (defrule action-fire 
         ?us <- (status (step ?s) (currently running))

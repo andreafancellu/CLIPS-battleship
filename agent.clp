@@ -3,20 +3,33 @@
 ;  ---------------------------------------------
 (defmodule AGENT (import MAIN ?ALL) (import ENV ?ALL) (export ?ALL))
 
+
 (deftemplate my-cell
 	(slot x)
 	(slot y)
 	(slot content (allowed-values unknown water boat hit-boat))
 	(slot status (allowed-values none guessed fired missed))
 )
+
 (deftemplate max_n
 	(slot maxr)
 	(slot indexr)
 	(slot maxc)
 	(slot indexc)
 )
+
+(deftemplate n_actions
+	(slot n_guess)
+	(slot n_fire)
+)
+
+
 (deffacts utils-stats
 	(max_n (maxr 0) (indexr 0) (maxc 0) (indexc 0))
+)
+
+(deffacts actions
+	(n_actions (n_guess 0) (n_fire 0))
 )
 
 (deffacts my_battle_field
@@ -122,29 +135,34 @@
 	(my-cell (x 9) (y 9) (content unknown) (status none))
 )
 
-(defrule check-max-row (declare (salience 1000))
+
+; ------------------------------ UTILS ------------------------------
+
+(defrule check-max-row (declare (salience 20))
 	?max <- (max_n (maxr ?mr) (indexr ?idxr))
 	(k-per-row (row ?r) (num ?n &:(> ?n ?mr)))
 =>
 	(modify ?max (maxr ?n) (indexr ?r))
 )
-(defrule check-max-col (declare (salience 1000))
+
+(defrule check-max-col (declare (salience 20))
 	?max <- (max_n (maxc ?mc) (indexc ?idxc))
 	(k-per-col (col ?c) (num ?n&:(> ?n ?mc)))
 =>
 	(modify ?max (maxc ?n) (indexc ?c))
 )
 
-;metto content water a tutte le celle sulle righe con 0 navi all'interno
-(defrule set_water_rows  (declare (salience 100))
+;mette content water in tutte le celle sulle righe con 0 navi all'interno
+(defrule set_water_rows  (declare (salience 20))
 	(k-per-row (row ?r) (num ?n))
 	(test(= ?n 0))
 	?cell <- (my-cell (x ?r) (y ?y) (content unknown) (status none))
 =>
 	(modify ?cell (content water))
 )
-;metto content water a tutte le celle sulle colonne con 0 navi all'interno
-(defrule set_water_cols (declare (salience 100))
+
+;mette content water in tutte le celle sulle colonne con 0 navi all'interno
+(defrule set_water_cols (declare (salience 20))
 	(k-per-col (col ?c) (num ?n))
 	(test(= ?n 0))
 	?cell <- (my-cell (x ?x) (y ?c) (content unknown) (status none))
@@ -152,15 +170,17 @@
 	(modify ?cell (content water))
 )
 
-
-(defrule add-water-from-known (declare (salience 100))
+(defrule add-water-from-known (declare (salience 20))
 	(k-cell (x ?x) (y ?y) (content water))
 	?cell <- (my-cell (x ?x) (y ?y) (content unknown) (status none))
 =>
 	(modify ?cell (content water))
 )
 
-(defrule guess-known (declare (salience 90))
+
+; ------------------------------ GUESS ------------------------------
+
+(defrule guess-known (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content bot | middle | top | left | right))
 	(not (exec  (action guess) (x ?x) (y ?y)))
@@ -181,7 +201,7 @@
     (pop-focus)
 )
 
-(defrule guess-known-sub (declare (salience 90))
+(defrule guess-known-sub (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content sub))
 	(not (exec  (action guess) (x ?x) (y ?y)))
@@ -202,7 +222,7 @@
     (pop-focus)
 )
 
-(defrule guess-from-bot (declare (salience 90))
+(defrule guess-from-bot (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content bot))
 	(not (exec (action guess) (x = (- ?x 1)) (y ?y)))
@@ -223,8 +243,7 @@
     (pop-focus)
 )
 
-
-(defrule guess-from-top (declare (salience 90))
+(defrule guess-from-top (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content top))
 	(not (exec (action guess) (x = (+ ?x 1)) (y ?y)))
@@ -245,8 +264,7 @@
     (pop-focus)
 )
 
-
-(defrule guess-from-left (declare (salience 90))
+(defrule guess-from-left (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content left))
 	(not (exec (action guess) (x ?x) (y = (+ ?y 1))))
@@ -267,9 +285,7 @@
     (pop-focus)
 )
 
-
-
-(defrule guess-from-right (declare (salience 90))
+(defrule guess-from-right (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content right))
 	(not (exec (action guess) (x ?x) (y = (- ?y 1))))
@@ -291,6 +307,8 @@
 )
 
 
+; ------------------------------ FIRE ------------------------------
+
 (defrule fire-most-likelihood-cell 
 	?max <- (max_n (indexr ?x) (indexc ?y))
 	(status (step ?s)(currently running))
@@ -304,12 +322,26 @@
 )
 
 
+; ------------------------------ SOLVE ------------------------------
+
+(defrule solve-when-put-all-guess (declare (salience 40))
+	(status (step ?s)(currently running))
+	(n_actions (n_guess ?n&:(> ?n 19)))
+=>
+	(assert (exec (step ?s) (action solve)))
+	(printout t "solve" crlf)
+	(pop-focus)
+)
+
+
+
+; ------------------------------ PRINT ------------------------------
+
 (defrule print_my_board
 	(my-cell (x ?x) (y ?y) (content ?c) (status ?s))
 =>
 	(printout t "Mycell: " ?x " - " ?y " is: " ?c "." crlf)
 )
-
 
 ;(defrule print-rows-i-know (declare (salience 15))
 ;	(k-per-row (row ?r) (num ?n))
@@ -322,7 +354,6 @@
 ;=>
 ;	(printout t "I know that col " ?c ", contains " ?n " pieces." crlf)
 ;)
-
 
 ;(defrule check_values (declare (salience 14))
 ;	(max_n (maxr ?mr) (maxc ?mc))
