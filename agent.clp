@@ -7,7 +7,7 @@
 (deftemplate my-cell
 	(slot x)
 	(slot y)
-	(slot content (allowed-values unknown water boat hit-boat))
+	(slot content (allowed-values unknown water boat hit-boat maybe-boat))
 	(slot status (allowed-values none guessed fired missed))
 )
 (deftemplate navy
@@ -21,6 +21,9 @@
 	(slot indexr)
 	(slot maxc)
 	(slot indexc)
+	(slot max-maybe)
+	(slot x-maybe)
+	(slot y-maybe)
 )
 (deftemplate n_actions
 	(slot n_guess)
@@ -36,7 +39,7 @@
 )
 
 (deffacts utils-stats
-	(max_n (maxr 0) (indexr 0) (maxc 0) (indexc 0))
+	(max_n (maxr 0) (indexr 0) (maxc 0) (indexc 0) (max-maybe 0) (x-maybe 0) (y-maybe 0))
 )
 
 (deffacts actions
@@ -188,6 +191,56 @@
 	(modify ?cell (content water))
 )
 
+(defrule maybe-boat-down-from-middle (declare (salience 20))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?down <- (my-cell (x = (+ ?x 1)) (y ?y) (content unknown) (status none))
+	(k-per-row (row = (+ ?x 1)) (num ?nr&:(> ?nr 0)))
+	(k-per-col (col ?y) (num ?nc&:(> ?nc 0)))
+=>
+	(modify ?down (content maybe-boat))
+)
+
+(defrule maybe-boat-up-from-middle (declare (salience 20))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?up <- (my-cell (x = (- ?x 1)) (y ?y) (content unknown) (status none))
+	(k-per-row (row = (- ?x 1)) (num ?nr&:(> ?nr 0)))
+	(k-per-col (col ?y) (num ?nc&:(> ?nc 0)))
+=>
+	(modify ?up (content maybe-boat))
+)
+
+(defrule maybe-boat-left-from-middle (declare (salience 20))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?left <- (my-cell (x ?x) (y = (- ?y 1)) (content unknown))
+	(k-per-row (row ?x) (num ?nr&:(> ?nr 0)))
+	(k-per-col (col = (- ?y 1)) (num ?nc&:(> ?nc 0)))
+=>
+	(modify ?left (content maybe-boat))
+)
+
+(defrule maybe-boat-right-from-middle (declare (salience 20))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?right <- (my-cell (x ?x) (y = (+ ?y 1)) (content unknown) (status none))
+	(k-per-row (row ?x) (num ?nr&:(> ?nr 0)))
+	(k-per-col (col = (+ ?y 1)) (num ?nc&:(> ?nc 0)))
+=>
+	(modify ?right (content maybe-boat))
+)
+
+(defrule check-max-maybe-boats (declare (salience 20))
+	?max <- (max_n (max-maybe ?mm) (x-maybe ?mx) (y-maybe ?my))
+	?cell <- (my-cell (x ?x) (y ?y) (content maybe-boat))
+	(k-per-row (row ?x) (num ?nr))
+	(k-per-col (col ?y) (num ?nc))
+	?sum <- (+ ?nr ?nc)
+	(> ?sum ?mm)
+=>
+	(modify ?max (max-maybe (+ ?nr ?nc)) (x-maybe ?x) (y-maybe ?y))
+)
 
 ; ------------------------------ GUESS ------------------------------
 ; TODO: aggiornare valore massimo dopo ogni guess (rimetterlo a 0 per poi ricalcolarlo nel next step)
@@ -458,16 +511,24 @@
 	(pop-focus)
 )
 
-
 (defrule fire-most-likelihood-cell 
-	?max <- (max_n (indexr ?x) (indexc ?y))
-	(status (step ?s)(currently running))
-	(my-cell (x ?x) (y ?y) (content unknown) (status none))
-	(not (exec (action fire|guess) (x ?x) (y ?y)))
+    ?max <- (max_n (indexr ?x) (indexc ?y))
+    (status (step ?s)(currently running))
+    (my-cell (x ?x) (y ?y) (content unknown) (status none))
+    (not (exec (action fire|guess) (x ?x) (y ?y)))
 =>
-	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
-	(modify ?max (maxr 0) (indexr 0) (maxc 0) (indexc 0))
-	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+    (assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+    (modify ?max (maxr 0) (indexr 0) (maxc 0) (indexc 0))
+    (printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+    (pop-focus)
+)
+
+(defrule fire-max-maybe-boat-cell
+	(status (step ?s)(currently running))
+	(max_n (max-maybe ?mm) (x-maybe ?x) (y-maybe ?y))
+	(not (exec (step ?s) (action fire|guess) (x ?x) (y ?y)))
+=>
+	(assert(exec (step ?s) (action fire) (x ?x) (y ?y)))
 	(pop-focus)
 )
 
@@ -482,8 +543,6 @@
 	(printout t "solve" crlf)
 	(pop-focus)
 )
-
-
 
 ; ------------------------------ PRINT ------------------------------
 
