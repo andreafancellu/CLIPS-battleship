@@ -191,28 +191,28 @@
 	(modify ?cell (content water))
 )
 
-(defrule maybe-boat-down-from-middle (declare (salience 20))
-	(status (step ?s)(currently running))
+(defrule maybe-boat-down-from-middle (declare (salience 1))
+	;(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content middle))
-	?down <- (my-cell (x = (+ ?x 1)) (y ?y) (content unknown) (status none))
+	?down <- (my-cell (x = (+ ?x 1)) (y ?y) (content unknown))
 	(k-per-row (row = (+ ?x 1)) (num ?nr&:(> ?nr 0)))
 	(k-per-col (col ?y) (num ?nc&:(> ?nc 0)))
 =>
 	(modify ?down (content maybe-boat))
 )
 
-(defrule maybe-boat-up-from-middle (declare (salience 20))
-	(status (step ?s)(currently running))
+(defrule maybe-boat-up-from-middle (declare (salience 1))
+	;(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content middle))
-	?up <- (my-cell (x = (- ?x 1)) (y ?y) (content unknown) (status none))
+	?up <- (my-cell (x = (- ?x 1)) (y ?y) (content unknown))
 	(k-per-row (row = (- ?x 1)) (num ?nr&:(> ?nr 0)))
 	(k-per-col (col ?y) (num ?nc&:(> ?nc 0)))
 =>
 	(modify ?up (content maybe-boat))
 )
 
-(defrule maybe-boat-left-from-middle (declare (salience 20))
-	(status (step ?s)(currently running))
+(defrule maybe-boat-left-from-middle (declare (salience 1))
+	;(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content middle))
 	?left <- (my-cell (x ?x) (y = (- ?y 1)) (content unknown))
 	(k-per-row (row ?x) (num ?nr&:(> ?nr 0)))
@@ -221,26 +221,26 @@
 	(modify ?left (content maybe-boat))
 )
 
-(defrule maybe-boat-right-from-middle (declare (salience 20))
-	(status (step ?s)(currently running))
+(defrule maybe-boat-right-from-middle (declare (salience 1))
+	;(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content middle))
-	?right <- (my-cell (x ?x) (y = (+ ?y 1)) (content unknown) (status none))
+	?right <- (my-cell (x ?x) (y = (+ ?y 1)) (content unknown))
 	(k-per-row (row ?x) (num ?nr&:(> ?nr 0)))
 	(k-per-col (col = (+ ?y 1)) (num ?nc&:(> ?nc 0)))
 =>
 	(modify ?right (content maybe-boat))
 )
 
-(defrule check-max-maybe-boats (declare (salience 20))
-	?max <- (max_n (max-maybe ?mm) (x-maybe ?mx) (y-maybe ?my))
-	?cell <- (my-cell (x ?x) (y ?y) (content maybe-boat))
-	(k-per-row (row ?x) (num ?nr))
-	(k-per-col (col ?y) (num ?nc))
-	?sum <- (+ ?nr ?nc)
-	(> ?sum ?mm)
-=>
-	(modify ?max (max-maybe (+ ?nr ?nc)) (x-maybe ?x) (y-maybe ?y))
-)
+;(defrule check-max-maybe-boats 
+;	?cell <- (my-cell (x ?x) (y ?y) (content maybe-boat))
+;	(k-per-row (row ?x) (num ?nr))
+;	(k-per-col (col ?y) (num ?nc))
+;	;?s <- (+ ?nr ?nc)
+;	?max <- (max_n (max-maybe ?mm) (x-maybe ?mx) (y-maybe ?my))
+;=>
+	;(printout t "AAA: "?s crlf)
+;	(modify ?max (max-maybe (+ ?nr ?nc)) (x-maybe ?x) (y-maybe ?y))
+;)
 
 ; ------------------------------ GUESS ------------------------------
 ; TODO: aggiornare valore massimo dopo ogni guess (rimetterlo a 0 per poi ricalcolarlo nel next step)
@@ -462,7 +462,7 @@
 (defrule fire-down-from-top
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content top))
-	(my-cell (x = (+ ?x 2)) (y ?y) (content unknown) (status none))
+	(my-cell (x = (+ ?x 2)) (y ?y) (content unknown | maybe-boat) (status none))
 	(not (exec (action fire|guess) (x = (+ ?x 2)) (y ?y)))
 =>
 	(bind ?x (+ ?x 2)) 
@@ -475,7 +475,7 @@
 (defrule fire-up-from-bot
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content bot))
-	(my-cell (x = (- ?x 2)) (y ?y) (content unknown) (status none))
+	(my-cell (x = (- ?x 2)) (y ?y) (content unknown | maybe-boat) (status none))
 	(not (exec (action fire|guess) (x = (- ?x 2)) (y ?y)))
 =>
 	(bind ?x (- ?x 2)) 
@@ -488,7 +488,7 @@
 (defrule fire-left-from-right
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content right))
-	(my-cell (x ?x) (y = (- ?y 2)) (content unknown) (status none))
+	(my-cell (x ?x) (y = (- ?y 2)) (content unknown | maybe-boat) (status none))
 	(not (exec (action fire|guess) (x ?x) (y = (- ?y 2))))
 =>
 	(bind ?y (- ?y 2)) 
@@ -501,7 +501,7 @@
 (defrule fire-right-from-left
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content right))
-	(my-cell (x ?x) (y = (+ ?y 2)) (content unknown) (status none))
+	(my-cell (x ?x) (y = (+ ?y 2)) (content unknown | maybe-boat) (status none))
 	(not (exec (action fire|guess) (x ?x) (y = (+ ?y 2))))
 =>
 	(bind ?y (+ ?y 2)) 
@@ -514,7 +514,7 @@
 (defrule fire-most-likelihood-cell 
     ?max <- (max_n (indexr ?x) (indexc ?y))
     (status (step ?s)(currently running))
-    (my-cell (x ?x) (y ?y) (content unknown) (status none))
+    (my-cell (x ?x) (y ?y) (content unknown | maybe-boat) (status none))
     (not (exec (action fire|guess) (x ?x) (y ?y)))
 =>
     (assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
@@ -529,6 +529,7 @@
 	(not (exec (step ?s) (action fire|guess) (x ?x) (y ?y)))
 =>
 	(assert(exec (step ?s) (action fire) (x ?x) (y ?y)))
+	(printout t "FIRE MAX MAYBE in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
 
