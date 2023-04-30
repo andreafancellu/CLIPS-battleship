@@ -11,10 +11,12 @@
 )
 (deftemplate max_n
 	(slot maxr)
+	(slot indexr)
 	(slot maxc)
+	(slot indexc)
 )
 (deffacts utils-stats
-	(max_n (maxr 0) (maxc 0))
+	(max_n (maxr 0) (indexr 0) (maxc 0) (indexc 0))
 )
 
 (deffacts my_battle_field
@@ -124,13 +126,13 @@
 	?max <- (max_n (maxr ?mr))
 	(k-per-row (row ?r) (num ?n &:(> ?n ?mr)))
 =>
-	(modify ?max (maxr ?n))
+	(modify ?max (maxr ?n) (indexr ?r))
 )
 (defrule check-max-col (declare (salience 1000))
 	?max <- (max_n (maxc ?mc))
 	(k-per-col (col ?c) (num ?n&:(> ?n ?mc)))
 =>
-	(modify ?max (maxc ?n))
+	(modify ?max (maxc ?n) (indexc ?c))
 )
 ;metto content water a tutte le celle sulle righe con 0 navi all'interno
 (defrule set_water_rows  (declare (salience 100))
@@ -160,7 +162,7 @@
 
 (defrule guess-known (declare (salience 90)); se c'è una cella nota che contiene un sottomarino, allora mettici la guess. ESEGUE 20 VOLTE (perchè ho 20 esecuzioni per la guess)
 	(status (step ?s)(currently running))
-	(k-cell (x ?x)(y ?y)(content sub | bot | middle | top))
+	(k-cell (x ?x)(y ?y)(content sub | bot | middle | top | left | right))
 	(not (exec  (action guess) (x ?x) (y ?y)))
 	?cell <- (my-cell (x ?x) (y ?y) (content unknown) (status none))
 	?nrow <- (k-per-row (row ?x) (num ?nr))
@@ -200,7 +202,8 @@
     (pop-focus)
 )
 
-(defrule fire-most-likelihood-cell ;(declare (salience 10))
+(defrule fire-most-likelihood-cell 
+	(max_n (indexr ?x) (indexc ?y))
 	(status (step ?s)(currently running))
 	(my-cell (x ?x) (y ?y) (content unknown) (status none))
 	(not (exec (action fire|guess) (x ?x) (y ?y)))
