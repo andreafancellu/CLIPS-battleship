@@ -134,6 +134,7 @@
 =>
 	(modify ?max (maxc ?n) (indexc ?c))
 )
+
 ;metto content water a tutte le celle sulle righe con 0 navi all'interno
 (defrule set_water_rows  (declare (salience 100))
 	(k-per-row (row ?r) (num ?n))
@@ -160,9 +161,9 @@
 	(modify ?cell (content water))
 )
 
-(defrule guess-known (declare (salience 90)); se c'è una cella nota che contiene un sottomarino, allora mettici la guess. ESEGUE 20 VOLTE (perchè ho 20 esecuzioni per la guess)
+(defrule guess-known (declare (salience 90))
 	(status (step ?s)(currently running))
-	(k-cell (x ?x)(y ?y)(content sub | bot | middle | top | left | right))
+	(k-cell (x ?x)(y ?y)(content bot | middle | top | left | right))
 	(not (exec  (action guess) (x ?x) (y ?y)))
 	?cell <- (my-cell (x ?x) (y ?y) (content unknown) (status none))
 	?nrow <- (k-per-row (row ?x) (num ?nr))
@@ -178,6 +179,27 @@
 	(modify ?ncol (num ?nc))
 	
 	(printout t "guess-known in pos [" ?x ", " ?y "] at step" ?s  crlf)
+    (pop-focus)
+)
+
+(defrule guess-known-sub (declare (salience 90))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content sub))
+	(not (exec  (action guess) (x ?x) (y ?y)))
+	?cell <- (my-cell (x ?x) (y ?y) (content unknown) (status none))
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+=>
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	
+	(modify ?cell (content boat) (status guessed))
+
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-known-sub in pos [" ?x ", " ?y "] at step" ?s  crlf)
     (pop-focus)
 )
 
@@ -202,6 +224,74 @@
     (pop-focus)
 )
 
+
+(defrule guess-from-top (declare (salience 90))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content top))
+	(not (exec (action guess) (x = (+ ?x 1)) (y ?y)))
+	?cell <- (my-cell (x = (+ ?x 1)) (y ?y) (content unknown) (status none))
+	?nrow <- (k-per-row (row = (+ ?x 1)) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+=>
+	(bind ?x (+ ?x 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?cell (content boat) (status guessed))
+	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-from-top in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+
+(defrule guess-from-left (declare (salience 90))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content left))
+	(not (exec (action guess) (x ?x) (y = (+ ?y 1))))
+	?cell <- (my-cell (x ?x) (y = (+ ?y 1)) (content unknown) (status none))
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col = (+ ?y 1)) (num ?nc))
+=>
+	(bind ?y (+ ?y 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?cell (content boat) (status guessed))
+	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-from-left in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+
+
+(defrule guess-from-right (declare (salience 90))
+	(status (step ?s)(currently running))
+	(k-cell (x ?x)(y ?y)(content right))
+	(not (exec (action guess) (x ?x) (y = (- ?y 1))))
+	?cell <- (my-cell (x ?x) (y = (- ?y 1)) (content unknown) (status none))
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col = (- ?y 1)) (num ?nc))
+=>
+	(bind ?y (- ?y 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?cell (content boat) (status guessed))
+	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-from-right in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+
 (defrule fire-most-likelihood-cell 
 	(max_n (indexr ?x) (indexc ?y))
 	(status (step ?s)(currently running))
@@ -214,32 +304,32 @@
 )
 
 
-(defrule print_my_board (declare (salience 15))
+(defrule print_my_board
 	(my-cell (x ?x) (y ?y) (content ?c) (status ?s))
 =>
 	(printout t "Mycell: " ?x " - " ?y " is: " ?c "." crlf)
 )
 
 
-(defrule print-rows-i-know (declare (salience 15))
-	(k-per-row (row ?r) (num ?n))
-=>
-	(printout t "I know that row " ?r ", contains " ?n " pieces." crlf)
-)
+;(defrule print-rows-i-know (declare (salience 15))
+;	(k-per-row (row ?r) (num ?n))
+;=>
+;	(printout t "I know that row " ?r ", contains " ?n " pieces." crlf)
+;)
  
-(defrule print-columns-i-know (declare (salience 15))
-	(k-per-col (col ?c) (num ?n))
-=>
-	(printout t "I know that col " ?c ", contains " ?n " pieces." crlf)
-)
+;(defrule print-columns-i-know (declare (salience 15))
+;	(k-per-col (col ?c) (num ?n))
+;=>
+;	(printout t "I know that col " ?c ", contains " ?n " pieces." crlf)
+;)
 
 
-(defrule check_values (declare (salience 14))
-	(max_n (maxr ?mr) (maxc ?mc))
-=>
-	(printout t "Max row is " ?mr "." crlf)
-	(printout t "Max col is " ?mc "." crlf)
-)
+;(defrule check_values (declare (salience 14))
+;	(max_n (maxr ?mr) (maxc ?mc))
+;=>
+;	(printout t "Max row is " ?mr "." crlf)
+;	(printout t "Max col is " ?mc "." crlf)
+;)
 
 ; idea per strategia da implementare:
 ; - se ci sono caselle note che contengono una barca/pezzo di barca, contrassegnale come guessed - FATTO
