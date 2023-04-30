@@ -123,13 +123,13 @@
 )
 
 (defrule check-max-row (declare (salience 1000))
-	?max <- (max_n (maxr ?mr))
+	?max <- (max_n (maxr ?mr) (indexr ?idxr))
 	(k-per-row (row ?r) (num ?n &:(> ?n ?mr)))
 =>
 	(modify ?max (maxr ?n) (indexr ?r))
 )
 (defrule check-max-col (declare (salience 1000))
-	?max <- (max_n (maxc ?mc))
+	?max <- (max_n (maxc ?mc) (indexc ?idxc))
 	(k-per-col (col ?c) (num ?n&:(> ?n ?mc)))
 =>
 	(modify ?max (maxc ?n) (indexc ?c))
@@ -154,9 +154,8 @@
 
 
 (defrule add-water-from-known (declare (salience 100))
-	;(status (step ?s)(currently running))
 	(k-cell (x ?x) (y ?y) (content water))
-	?cell <- (my-cell (x ?x) (y ?Y) (content unknown) (status none))
+	?cell <- (my-cell (x ?x) (y ?y) (content unknown) (status none))
 =>
 	(modify ?cell (content water))
 )
@@ -293,12 +292,13 @@
 
 
 (defrule fire-most-likelihood-cell 
-	(max_n (indexr ?x) (indexc ?y))
+	?max <- (max_n (indexr ?x) (indexc ?y))
 	(status (step ?s)(currently running))
 	(my-cell (x ?x) (y ?y) (content unknown) (status none))
 	(not (exec (action fire|guess) (x ?x) (y ?y)))
 =>
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	(modify ?max (maxr 0) (indexr 0) (maxc 0) (indexc 0))
 	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
@@ -333,8 +333,7 @@
 
 ; idea per strategia da implementare:
 ; - se ci sono caselle note che contengono una barca/pezzo di barca, contrassegnale come guessed - FATTO
-; - non fare guess su caselle che sono all'intersezione di righe colonne entrambe con 0 su (k-per-col, k-per-row)
-; - fai le fire sulle caselle in cui l'intersezione è maggiore
+; - fai le fire sulle caselle in cui l'intersezione è maggiore FATTO
 ; - se da una fire viene fuori che la casella contiene un pezzo di barca, fai guess - FATTO
 ; - se al passo n hai fatto fire e hai scoperto che c'è un pezzo di barca, ai passi successivi fai guess nelle caselle adiacenti - FATTO
 ; - usa fire per decidere quale delle guess messe è quella che contiene un pezzo di barca.
