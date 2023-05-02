@@ -149,6 +149,7 @@
 	(my-cell (x 9) (y 9) (content unknown) (status none))
 )
 
+; (not (k-per-row (row ?r2&:(new ?r2 ?r)) (num ?n2 &:(> ?n2 ?n))))  
 
 ; ------------------------------ UTILS ------------------------------
 (defrule check-max-row (declare (salience 20))
@@ -185,9 +186,10 @@
 
 (defrule add-water-from-known (declare (salience 20))
 	(k-cell (x ?x) (y ?y) (content water))
-	?cell <- (my-cell (x ?x) (y ?y) (content unknown) (status none))
+	;?cell <- (my-cell (x ?x) (y ?y) (content ?c) (status none))
 =>
-	(modify ?cell (content water))
+	;(modify ?cell (content water))
+	(printout t "added water in [" ?x ", " ?y "]" crlf)
 )
 
 ; Non proprio facile da gestire secondo me
@@ -498,68 +500,84 @@
     (pop-focus)
 )
 
+
 ; ------------------------------ FIRE ------------------------------
 (defrule fire-down-from-top 
 	(status (step ?s)(currently running))
+	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
 	(k-cell (x ?x)(y ?y)(content top))
 	(my-cell (x = (+ ?x 2)) (y ?y) (content unknown | maybe-boat) (status none))
 	(not (exec (action fire|guess) (x = (+ ?x 2)) (y ?y)))
 =>
+	(bind ?nf (+ ?nf 1))
+	(modify ?act (n_fire ?nf))
 	(bind ?x (+ ?x 2)) 
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
 	
-	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+	(printout t "fire-down-from-top in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
 
 (defrule fire-up-from-bot 
 	(status (step ?s)(currently running))
+	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
 	(k-cell (x ?x)(y ?y)(content bot))
 	(my-cell (x = (- ?x 2)) (y ?y) (content unknown | maybe-boat) (status none))
 	(not (exec (action fire|guess) (x = (- ?x 2)) (y ?y)))
 =>
+	(bind ?nf (+ ?nf 1))
+	(modify ?act (n_fire ?nf))
 	(bind ?x (- ?x 2)) 
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
 	
-	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+	(printout t "fire-up-from-bot in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
 
 (defrule fire-left-from-right 
 	(status (step ?s)(currently running))
+	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
 	(k-cell (x ?x)(y ?y)(content right))
 	(my-cell (x ?x) (y = (- ?y 2)) (content unknown | maybe-boat) (status none))
 	(not (exec (action fire|guess) (x ?x) (y = (- ?y 2))))
 =>
+	(bind ?nf (+ ?nf 1))
+	(modify ?act (n_fire ?nf))
 	(bind ?y (- ?y 2)) 
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
 	
-	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+	(printout t "fire-left-from-right in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
 
 (defrule fire-right-from-left 
 	(status (step ?s)(currently running))
+	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
 	(k-cell (x ?x)(y ?y)(content right))
 	(my-cell (x ?x) (y = (+ ?y 2)) (content unknown | maybe-boat) (status none))
 	(not (exec (action fire|guess) (x ?x) (y = (+ ?y 2))))
 =>
+	(bind ?nf (+ ?nf 1))
+	(modify ?act (n_fire ?nf))
 	(bind ?y (+ ?y 2)) 
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
 	
-	(printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+	(printout t "fire-right-from-left in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
 
 (defrule fire-most-likelihood-cell 
     ?max <- (max_n (indexr ?x) (indexc ?y))
+	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
     (status (step ?s)(currently running))
     (my-cell (x ?x) (y ?y) (content unknown | maybe-boat) (status none))
     (not (exec (action fire|guess) (x ?x) (y ?y)))
 =>
+	(bind ?nf (+ ?nf 1))
+	(modify ?act (n_fire ?nf))
     (assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
     (modify ?max (maxr 0) (indexr 0) (maxc 0) (indexc 0))
-    (printout t "FIRE in pos [" ?x ", " ?y "] at step " ?s crlf)
+    (printout t "fire-most-likelihood in pos [" ?x ", " ?y "] at step " ?s crlf)
     (pop-focus)
 )
 
@@ -619,3 +637,37 @@
 ; - se da una fire viene fuori che la casella contiene un pezzo di barca, fai guess - FATTO
 ; - se al passo n hai fatto fire e hai scoperto che c'è un pezzo di barca, ai passi successivi fai guess nelle caselle adiacenti - FATTO
 ; - usa fire per decidere quale delle guess messe è quella che contiene un pezzo di barca.
+
+(defrule guess-most-likelihood-cell 
+    ?max <- (max_n (indexr ?x) (indexc ?y))
+	?act <- (n_actions (n_guess ?ng))
+    (status (step ?s)(currently running))
+    (my-cell (x ?x) (y ?y))
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+    (not (exec (action guess) (x ?x) (y ?y)))
+=>
+    (assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?max (maxr 0) (indexr 0) (maxc 0) (indexc 0))
+	(bind ?ng (+ ?ng 1))
+	(modify ?act (n_guess ?ng))	
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+    (printout t "guess-most-likelihood in pos [" ?x ", " ?y "] at step " ?s crlf)
+    (pop-focus)
+)
+
+(defrule guess-what-remains
+	(status (step ?s)(currently running))
+	?act <- (n_actions (n_guess ?ng))
+	(my-cell (x ?x) (y ?y))
+	(not (exec (action guess) (x ?x) (y ?y)))
+=>
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(bind ?ng (+ ?ng 1))
+	(modify ?act (n_guess ?ng))	
+    (printout t "guess-what-remains in pos [" ?x ", " ?y "] at step " ?s crlf)
+    (pop-focus)
+)

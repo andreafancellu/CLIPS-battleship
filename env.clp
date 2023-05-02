@@ -314,4 +314,13 @@
 	(assert (resetted ?x ?y))
 )
 
+; -------------------------------------------------- AGGIUNTA DA NOI, CHIEDERE SE VA BENE -------------------------------------------
+(defrule make-visible-water (declare (salience 5))
+	(fire ?x ?y)
+	(cell (x ?x) (y ?y) (content water))
+	(not (k-cell (x ?x) (y ?y) ) )
+=>
+	(assert (k-cell (x ?x) (y ?y) (content water)))
+	(assert (resetted ?x ?y))
+)
 
