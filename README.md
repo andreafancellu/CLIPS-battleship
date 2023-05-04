@@ -22,8 +22,7 @@ Expert System in CLIPS that plays a single player version of battleship.
     - Right
     - Water
 
-###### Ships
-There are 4 kind o ships:
+###### Ships:
     1. Battleship (4 cells)
     2. Cruiser (3 cells)
     3. Destroyer (2 cells)
