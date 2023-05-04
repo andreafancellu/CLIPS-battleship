@@ -149,7 +149,8 @@
 	(my-cell (x 9) (y 9) (content unknown) (status none))
 )
 
-; (not (k-per-row (row ?r2&:(new ?r2 ?r)) (num ?n2 &:(> ?n2 ?n))))  
+; (not (k-per-row (row ?r2&:(new ?r2 ?r)) (num ?n2 &:(> ?n2 ?n))))  ; calcola il valore massimo di n per k-per-row
+; calcolarlo in questo mdoo per evitare di tenere traccia dei massimi con utils stats. In sostanza va calcolato nei posti in cui serve, fire e guess
 
 ; ------------------------------ UTILS ------------------------------
 (defrule check-max-row (declare (salience 20))
