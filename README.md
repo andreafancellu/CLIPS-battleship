@@ -6,7 +6,7 @@ Expert System in CLIPS that plays a single player version of battleship.
 ![Alt text](https://github.com/andreafancellu/CLIPS-battleship/blob/main/mappa%20battaglia%20navale.png)
 
 
-- Rows and Columns are marked with the number of pieces they contains
+- Rows and Columns are marked with the number of pieces they contain
 - Red cells are known to the system
 
 ###### The system can do three different moves:
