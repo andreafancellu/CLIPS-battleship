@@ -7,7 +7,7 @@
 (deftemplate my-cell
 	(slot x)
 	(slot y)
-	(slot content (allowed-values unknown water boat hit-boat maybe-boat))
+	(slot content (allowed-values unknown water boat hit-boat next-guess))
 	(slot status (allowed-values none guessed fired missed))
 )
 (deftemplate navy
@@ -187,65 +187,24 @@
 
 (defrule add-water-from-known (declare (salience 20))
 	(k-cell (x ?x) (y ?y) (content water))
-	;?cell <- (my-cell (x ?x) (y ?y) (content ?c) (status none))
+	?cell <- (my-cell (x ?x) (y ?y) (content unknown) (status none))
 =>
-	;(modify ?cell (content water))
+	(modify ?cell (content water))
 	(printout t "added water in [" ?x ", " ?y "]" crlf)
 )
 
-; Non proprio facile da gestire secondo me
-;(defrule add-water-between-boats (declare (salience 20))
-	;(k-cell (x ?x) (y ?y) (content sub))
-;=>
-;)
+(defrule add-next-guess-from-middle (declare (salience 20))
+	(k-cell (x ?x)(y ?y)(content middle))
+	(k-per-col (col ?y) (num ?nc&:(> ?nc 1)))
+	?cell_up <- (my-cell (x ?x_up&:(eq ?x_up (+ ?x 1))) (y ?y) (content unknown))
+	?cell_down <- (my-cell (x ?x_down&:(eq ?x_down (- ?x 1)))(y ?y) (content unknown))
+=>
+	(modify ?cell_up (content next-guess))
+	(modify ?cell_down (content next-guess))
+	(printout t "added next-guess in [" ?x_up ", " ?y "]" crlf)
+	(printout t "added next-guess in [" ?x_down ", " ?y "]" crlf)
+)
 
-; Non so quanto saranno utili questi metodi, l'idea alla base non mi convince
-(defrule maybe-boat-down-from-middle 
-	(k-cell (x ?x)(y ?y)(content middle))
-	?down <- (my-cell (x = (+ ?x 1)) (y ?y) (content unknown))
-	(k-per-row (row = (+ ?x 1)) (num ?nr&:(> ?nr 0)))
-	(k-per-col (col ?y) (num ?nc&:(> ?nc 0)))
-=>
-	(modify ?down (content maybe-boat))
-)
-; Non so quanto saranno utili questi metodi, l'idea alla base non mi convince
-(defrule maybe-boat-up-from-middle 
-	(k-cell (x ?x)(y ?y)(content middle))
-	?up <- (my-cell (x = (- ?x 1)) (y ?y) (content unknown))
-	(k-per-row (row = (- ?x 1)) (num ?nr&:(> ?nr 0)))
-	(k-per-col (col ?y) (num ?nc&:(> ?nc 0)))
-=>
-	(modify ?up (content maybe-boat))
-)
-; Non so quanto saranno utili questi metodi, l'idea alla base non mi convince
-(defrule maybe-boat-left-from-middle 
-	(k-cell (x ?x)(y ?y)(content middle))
-	?left <- (my-cell (x ?x) (y = (- ?y 1)) (content unknown))
-	(k-per-row (row ?x) (num ?nr&:(> ?nr 0)))
-	(k-per-col (col = (- ?y 1)) (num ?nc&:(> ?nc 0)))
-=>
-	(modify ?left (content maybe-boat))
-)
-; Non so quanto saranno utili questi metodi, l'idea alla base non mi convince
-(defrule maybe-boat-right-from-middle 
-	(k-cell (x ?x)(y ?y)(content middle))
-	?right <- (my-cell (x ?x) (y = (+ ?y 1)) (content unknown))
-	(k-per-row (row ?x) (num ?nr&:(> ?nr 0)))
-	(k-per-col (col = (+ ?y 1)) (num ?nc&:(> ?nc 0)))
-=>
-	(modify ?right (content maybe-boat))
-)
-; Non so quanto saranno utili questi metodi, l'idea alla base non mi convince
-;(defrule check-max-maybe-boats 
-;	?cell <- (my-cell (x ?x) (y ?y) (content maybe-boat))
-;	(k-per-row (row ?x) (num ?nr))
-;	(k-per-col (col ?y) (num ?nc))
-;	;?s <- (+ ?nr ?nc)
-;	?max <- (max_n (max-maybe ?mm) (x-maybe ?mx) (y-maybe ?my))
-;=>
-	;(printout t "AAA: "?s crlf)
-;	(modify ?max (max-maybe (+ ?nr ?nc)) (x-maybe ?x) (y-maybe ?y))
-;)
 
 ; ------------------------------ GUESS ------------------------------
 (defrule guess-known (declare (salience 10))
@@ -297,7 +256,7 @@
     (pop-focus)
 )
 
-(defrule guess-from-bot (declare (salience 10))
+(defrule guess-from-known-bot (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content bot))
 	?max <- (max_n (indexr ?idx) (indexc ?idy))
@@ -322,7 +281,7 @@
     (pop-focus)
 )
 
-(defrule guess-from-top (declare (salience 10))
+(defrule guess-from-known-top (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content top))
 	?max <- (max_n (indexr ?idx) (indexc ?idy))
@@ -347,7 +306,7 @@
     (pop-focus)
 )
 
-(defrule guess-from-left (declare (salience 10))
+(defrule guess-from-known-left (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content left))
 	?max <- (max_n (indexr ?idx) (indexc ?idy))
@@ -372,7 +331,7 @@
     (pop-focus)
 )
 
-(defrule guess-from-right (declare (salience 10))
+(defrule guess-from-known-right (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content right))
 	?max <- (max_n (indexr ?idx) (indexc ?idy))
@@ -397,7 +356,7 @@
     (pop-focus)
 )
 
-(defrule guess-down-from-middle (declare (salience 10))
+(defrule guess-down-from-known-middle (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content middle))
 	?max <- (max_n (indexr ?idx) (indexc ?idy))
@@ -423,7 +382,7 @@
     (pop-focus)
 )
 
-(defrule guess-up-from-middle (declare (salience 10))
+(defrule guess-up-from-known-middle (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content middle))
 	?max <- (max_n (indexr ?idx) (indexc ?idy))
@@ -449,7 +408,7 @@
     (pop-focus)
 )
 
-(defrule guess-left-from-middle (declare (salience 10))
+(defrule guess-left-from-known-middle (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content middle))
 	?max <- (max_n (indexr ?idx) (indexc ?idy))
@@ -475,7 +434,7 @@
     (pop-focus)
 )
 
-(defrule guess-right-from-middle (declare (salience 10))
+(defrule guess-right-from-known-middle (declare (salience 10))
 	(status (step ?s)(currently running))
 	(k-cell (x ?x)(y ?y)(content middle))
 	?max <- (max_n (indexr ?idx) (indexc ?idy))
@@ -501,13 +460,37 @@
     (pop-focus)
 )
 
+(defrule guess-from-next-guess (declare (salience 10))
+	(status (step ?s)(currently running))
+	?cell <- (my-cell (x ?x) (y ?y) (content next-guess))
+	?max <- (max_n (indexr ?idx) (indexc ?idy))
+	?act <- (n_actions (n_guess ?ng))
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+	(not (exec  (action guess) (x ?x) (y ?y)))
+=>
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?cell (content boat) (status guessed))
+	(modify ?max (maxr 0) (indexr 0) (maxc 0) (indexc 0))
+	(bind ?ng (+ ?ng 1))
+	(modify ?act (n_guess ?ng))
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	
+	(printout t "guess-from-next-guess in pos [" ?x ", " ?y "] at step" ?s  crlf)
+    (pop-focus)
+)
+
+
 
 ; ------------------------------ FIRE ------------------------------
-(defrule fire-down-from-top 
+(defrule fire-down-from-known-top (declare (salience 5))
 	(status (step ?s)(currently running))
 	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
 	(k-cell (x ?x)(y ?y)(content top))
-	(my-cell (x = (+ ?x 2)) (y ?y) (content unknown | maybe-boat) (status none))
+	(my-cell (x = (+ ?x 2)) (y ?y) (content unknown) (status none))
 	(not (exec (action fire|guess) (x = (+ ?x 2)) (y ?y)))
 =>
 	(bind ?nf (+ ?nf 1))
@@ -519,11 +502,11 @@
 	(pop-focus)
 )
 
-(defrule fire-up-from-bot 
+(defrule fire-up-from-known-bot (declare (salience 5))
 	(status (step ?s)(currently running))
 	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
 	(k-cell (x ?x)(y ?y)(content bot))
-	(my-cell (x = (- ?x 2)) (y ?y) (content unknown | maybe-boat) (status none))
+	(my-cell (x = (- ?x 2)) (y ?y) (content unknown) (status none))
 	(not (exec (action fire|guess) (x = (- ?x 2)) (y ?y)))
 =>
 	(bind ?nf (+ ?nf 1))
@@ -535,11 +518,11 @@
 	(pop-focus)
 )
 
-(defrule fire-left-from-right 
+(defrule fire-left-from-known-right (declare (salience 5))
 	(status (step ?s)(currently running))
 	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
 	(k-cell (x ?x)(y ?y)(content right))
-	(my-cell (x ?x) (y = (- ?y 2)) (content unknown | maybe-boat) (status none))
+	(my-cell (x ?x) (y = (- ?y 2)) (content unknown) (status none))
 	(not (exec (action fire|guess) (x ?x) (y = (- ?y 2))))
 =>
 	(bind ?nf (+ ?nf 1))
@@ -551,11 +534,11 @@
 	(pop-focus)
 )
 
-(defrule fire-right-from-left 
+(defrule fire-right-from-known-left (declare (salience 5))
 	(status (step ?s)(currently running))
 	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
 	(k-cell (x ?x)(y ?y)(content right))
-	(my-cell (x ?x) (y = (+ ?y 2)) (content unknown | maybe-boat) (status none))
+	(my-cell (x ?x) (y = (+ ?y 2)) (content unknown) (status none))
 	(not (exec (action fire|guess) (x ?x) (y = (+ ?y 2))))
 =>
 	(bind ?nf (+ ?nf 1))
@@ -567,11 +550,11 @@
 	(pop-focus)
 )
 
-(defrule fire-most-likelihood-cell 
+(defrule fire-most-likelihood-cell (declare (salience 5))
     ?max <- (max_n (indexr ?x) (indexc ?y))
 	?act <- (n_actions (n_fire ?nf&:(< ?nf 5)))
     (status (step ?s)(currently running))
-    (my-cell (x ?x) (y ?y) (content unknown | maybe-boat) (status none))
+    (my-cell (x ?x) (y ?y) (content unknown) (status none))
     (not (exec (action fire|guess) (x ?x) (y ?y)))
 =>
 	(bind ?nf (+ ?nf 1))
@@ -581,18 +564,6 @@
     (printout t "fire-most-likelihood in pos [" ?x ", " ?y "] at step " ?s crlf)
     (pop-focus)
 )
-
-; Commentata perchè faceva più casino che altro
-;(defrule fire-max-maybe-boat-cell 
-;	(status (step ?s)(currently running))
-;	(max_n (max-maybe ?mm) (x-maybe ?x) (y-maybe ?y))
-;	(not (exec (step ?s) (action fire|guess) (x ?x) (y ?y)))
-;=>
-;	(assert(exec (step ?s) (action fire) (x ?x) (y ?y)))
-;	(printout t "FIRE MAX MAYBE in pos [" ?x ", " ?y "] at step " ?s crlf)
-;	(pop-focus)
-;)
-
 
 ; ------------------------------ SOLVE ------------------------------
 
@@ -607,7 +578,7 @@
 
 ; ------------------------------ PRINT ------------------------------
 
-;(defrule print_my_board
+;(defrule print_my_board (declare (salience 40))
 ;	(my-cell (x ?x) (y ?y) (content ?c) (status ?s))
 ;=>
 ;	(printout t "Mycell: " ?x " - " ?y " is: " ?c "." crlf)
@@ -663,7 +634,7 @@
 (defrule guess-what-remains
 	(status (step ?s)(currently running))
 	?act <- (n_actions (n_guess ?ng))
-	(my-cell (x ?x) (y ?y))
+	(my-cell (x ?x) (y ?y) (content ~water))
 	(not (exec (action guess) (x ?x) (y ?y)))
 =>
 	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
