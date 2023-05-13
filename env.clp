@@ -1,5 +1,5 @@
 (defmodule ENV (import MAIN ?ALL) (export deftemplate k-cell k-per-row  k-per-col))
-; template k sono cose note all'agente fin dal principio
+
 
 (deftemplate cell
 	(slot x)
@@ -14,7 +14,7 @@
 	(slot x)
 	(multislot ys)
 	(slot size)
-	(multislot status (allowed-values safe hit)) ; ciascun valore rappresenta lo stato di ciascun pezzo della nave
+	(multislot status (allowed-values safe hit))
 )
 
 
@@ -27,18 +27,18 @@
 )
 
 
-(deftemplate k-cell ; esportate come osservazioni, dalle fire
+(deftemplate k-cell 
 	(slot x)
 	(slot y)
 	(slot content (allowed-values water left right middle top bot sub))
 )
 
-(deftemplate k-per-row ; numero di celle occupate per riga, noto a priori
+(deftemplate k-per-row
 	(slot row)
 	(slot num)
 )
 
-(deftemplate k-per-col ; numero di celle occupata per colonna, noto a priori
+(deftemplate k-per-col
 	(slot col)
 	(slot num)
 )
@@ -109,7 +109,7 @@
 
 (defrule hit-boat-hor-trace
 
-	(cell (x ?x) (y ?y) (status guessed))
+	(cell (x ?x) (y ?y) (content hit-boat))
 	?b<- (boat-hor (x ?x) (ys $? ?y $?) (size ?s) (status $?prima safe $?dopo))
         (not (considered ?x ?y))
 
@@ -120,7 +120,7 @@
 
 (defrule hit-boat-ver-trace
 
-	(cell (x ?x) (y ?y) (status guessed))
+	(cell (x ?x) (y ?y) (content hit-boat))
         (not (considered ?x ?y))
 	?b <-(boat-ver (xs $? ?x $?) (y ?y) (size ?s) (status $?prima safe $?dopo))
 =>
@@ -130,9 +130,9 @@
 
 (defrule sink-boat-hor
 
-	(cell (x ?x) (y ?y) (status guessed))
+	(cell (x ?x) (y ?y) (content hit-boat))
 	(boat-hor (name ?n) (x ?x) (ys $? ?y $?) (size ?s) (status $?ss))
-        ;fsol 
+        
 	(or 
 		(and (test (eq ?s 1))
 		     (test (subsetp $?ss (create$ hit)))
@@ -159,7 +159,7 @@
 
 (defrule sink-boat-ver
 
-	(cell (x ?x) (y ?y) (status guessed))
+	(cell (x ?x) (y ?y) (content hit-boat))
 	(boat-ver (name ?n) (xs $? ?x $?) (y ?y) (size ?s) (status $?ss))
         
 	(or 
@@ -188,7 +188,7 @@
 (defrule solve-count-guessed-ok
         (solve)
         (guess ?x ?y)
-        ?c <- (cell (x ?x) (y ?y) (content boat|hit-boat) (status ~guessed))
+        ?c <- (cell (x ?x) (y ?y) (content boat) (status none))
         ?st <- (statistics (num_guess_ok ?gok))
 =>
 	(modify ?st (num_guess_ok (+ 1 ?gok)))
@@ -229,7 +229,9 @@
 
 (deffunction scoring (?fok ?fko ?gok ?gko ?saf ?sink ?nf ?ng)
 
-	(- (+ (* ?gok 15) (* ?sink 20) )  (+ (* ?gko 10) (* ?saf 10))  (* ?nf 20) (* ?ng 20))
+	(- (- (+ (* ?fok 10) (* ?gok 10) (* ?sink 15) )  (+ (* ?fko 10) (* ?gko 10) (* ?saf 10)) )
+	 
+	   (+ (* ?nf 20) (* ?ng 20)) )
 )
 
 	
@@ -314,7 +316,7 @@
 	(assert (resetted ?x ?y))
 )
 
-; -------------------------------------------------- AGGIUNTA DA NOI, CHIEDERE SE VA BENE -------------------------------------------
+
 (defrule make-visible-water (declare (salience 5))
 	(fire ?x ?y)
 	(cell (x ?x) (y ?y) (content water))
@@ -323,4 +325,5 @@
 	(assert (k-cell (x ?x) (y ?y) (content water)))
 	(assert (resetted ?x ?y))
 )
+
 
