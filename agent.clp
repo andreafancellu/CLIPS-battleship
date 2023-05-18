@@ -142,18 +142,15 @@
 ; calcolarlo in questo mdoo per evitare di tenere traccia dei massimi con utils stats. In sostanza va calcolato nei posti in cui serve, fire e guess
 
 ; ------------------------------ UTILS ------------------------------
-(defrule check-max-row (declare (salience 20))
-	?max <- (max_n (maxr ?mr) (indexr ?idxr))
+(defrule check-max (declare (salience 20))
+	?max <- (max_n (maxr ?mr) (maxc ?mc) (indexr ?idxr) (indexc ?idxc))
 	(k-per-row (row ?r) (num ?n &:(> ?n ?mr)))
+	(k-per-col (col ?c) (num ?m&:(> ?m ?mc)))
+	(my-cell (x ?r) (y ?c) (content ~water))
 =>
 	(modify ?max (maxr ?n) (indexr ?r))
-)
+	(modify ?max (maxc ?m) (indexc ?c))
 
-(defrule check-max-col (declare (salience 20))
-	?max <- (max_n (maxc ?mc) (indexc ?idxc))
-	(k-per-col (col ?c) (num ?n&:(> ?n ?mc)))
-=>
-	(modify ?max (maxc ?n) (indexc ?c))
 )
 
 ;mette content water in tutte le celle sulle righe con 0 navi all'interno
@@ -642,4 +639,12 @@
 	(modify ?ncol (num ?nc))
     (printout t "guess-what-remains in pos [" ?x ", " ?y "] at step " ?s crlf)
     (pop-focus)
+)
+
+(defrule kill_yourself (declare (salience -1))
+	(status (step ?s)(currently running))
+=>
+	(assert (exec (step ?s) (action solve)))
+	(printout t "solve" crlf)
+	(pop-focus)
 )

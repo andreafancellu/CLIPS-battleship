@@ -1,6 +1,6 @@
 (load main.clp)
 (load env.clp)
-(load map.clp)
-(load agent.clp)
+(load main_map.clp)
+(load agent_versione_2.clp)
 (reset)
 (run)
