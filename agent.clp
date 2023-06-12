@@ -8,12 +8,14 @@
 	(slot y)
 	(slot content (allowed-values unknown water boat next-guess))
 )
+
 (deftemplate navy
 	(slot submarines)
 	(slot destroyers)
 	(slot cruisers)
 	(slot battleship)
 )
+
 (deftemplate max_n
 	(slot maxr)
 	(slot indexr)
@@ -232,6 +234,7 @@
 	(modify ?my_cell (content water))
 	(printout t "added water to right in [" ?x ", " ?y "]" crlf)
 )
+
 ; ------------------------------ GUESS ------------------------------
 (defrule guess-known (declare (salience 10))
 	(status (step ?s)(currently running))
