@@ -3,7 +3,6 @@
 ;  ---------------------------------------------
 (defmodule AGENT (import MAIN ?ALL) (import ENV ?ALL) (export ?ALL))
 
-
 (deftemplate my-cell
 	(slot x)
 	(slot y)
@@ -125,24 +124,6 @@
 
 ; ------------------------------ UTILS ------------------------------
 
-;mette content water in tutte le celle sulle righe con 0 navi all'interno
-(defrule set_water_rows  (declare (salience 20))
-	(k-per-row (row ?r) (num ?n))
-	(test(= ?n 0))
-	?cell <- (my-cell (x ?r) (y ?y) (content unknown) )
-=>
-	(modify ?cell (content water))
-)
-
-;mette content water in tutte le celle sulle colonne con 0 navi all'interno
-(defrule set_water_cols (declare (salience 20))
-	(k-per-col (col ?c) (num ?n))
-	(test(= ?n 0))
-	?cell <- (my-cell (x ?x) (y ?c) (content unknown) )
-=>
-	(modify ?cell (content water))
-)
-
 (defrule add-water-from-known (declare (salience 20))
 	(k-cell (x ?x) (y ?y) (content water))
 	?cell <- (my-cell (x ?x) (y ?y) (content unknown) )
@@ -150,7 +131,6 @@
 	(modify ?cell (content water))
 	(printout t "added water in [" ?x ", " ?y "]" crlf)
 )
-
 
 (defrule add-water-to-bottom (declare (salience 20))
 	?my_cell <- (my-cell (x ?x)(y ?y)(content unknown))
@@ -183,6 +163,7 @@
 	(modify ?my_cell (content water))
 	(printout t "added water to right in [" ?x ", " ?y "]" crlf)
 )
+
 ; ------------------------------ GUESS ------------------------------
 (defrule guess-known (declare (salience 10))
 	(status (step ?s)(currently running))
@@ -230,12 +211,13 @@
 	(status (step ?s)(currently running))
 	?act <- (n_actions (n_guess ?ng&:(< ?ng 20)))
 	(k-cell (x ?x)(y ?y)(content bot))
-	?cell <- (my-cell (x ?x2&:(eq ?x2 (- 1 ?x))) (y ?y) (content unknown) )
-	?nrow <- (k-per-row (row ?x2) (num ?nr))
+	?cell <- (my-cell (x = (- ?x 1)) (y ?y) (content unknown) )
+	?nrow <- (k-per-row (row = (- ?x 1)) (num ?nr))
 	?ncol <- (k-per-col (col ?y) (num ?nc))
-	(not (exec (action guess) (x ?x2) (y ?y)))
+	(not (exec (action guess) (x = (- ?x 1)) (y ?y)))
 =>
-	(assert (exec (step ?s) (action guess) (x ?x2) (y ?y)))
+	(bind ?x (- ?x 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
 	(modify ?cell (content boat) )
 	(bind ?nr (- ?nr 1))
 	(modify ?nrow (num ?nr))
@@ -243,7 +225,7 @@
 	(modify ?ncol (num ?nc))
 	(bind ?ng (+ ?ng 1))
 	(modify ?act (n_guess ?ng))
-	(printout t "guess-from-known-bot in pos [" ?x2 ", " ?y "] at step " ?s  crlf)
+	(printout t "guess-from-bot in pos [" ?x ", " ?y "] at step " ?s  crlf)
     (pop-focus)
 )
 
@@ -256,7 +238,6 @@
 	?ncol <- (k-per-col (col ?y) (num ?nc))
 	(not (exec (action guess) (x = (+ ?x 1)) (y ?y)))
 =>
-	(modify ?act (n_fire ?nf))
 	(bind ?x (+ ?x 1))
 	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
 	(modify ?cell (content boat) )
@@ -266,7 +247,7 @@
 	(modify ?ncol (num ?nc))
 	(bind ?ng (+ ?ng 1))
 	(modify ?act (n_guess ?ng))
-	(printout t "guess-from-known-top in pos [" ?x ", " ?y "] at step " ?s  crlf)
+	(printout t "guess-from-top in pos [" ?x ", " ?y "] at step " ?s  crlf)
     (pop-focus)
 )
 
@@ -288,7 +269,7 @@
 	(modify ?ncol (num ?nc))
 	(bind ?ng (+ ?ng 1))
 	(modify ?act (n_guess ?ng))
-	(printout t "guess-from-known-left in pos [" ?x ", " ?y "] at step " ?s  crlf)
+	(printout t "guess-from-left in pos [" ?x ", " ?y "] at step " ?s  crlf)
     (pop-focus)
 )
 
@@ -296,7 +277,6 @@
 	(status (step ?s)(currently running))
 	?act <- (n_actions (n_guess ?ng&:(< ?ng 20)))
 	(k-cell (x ?x)(y ?y)(content right))
-	
 	?cell <- (my-cell (x ?x) (y = (- ?y 1)) (content unknown) )
 	?nrow <- (k-per-row (row ?x) (num ?nr))
 	?ncol <- (k-per-col (col = (- ?y 1)) (num ?nc))
@@ -311,10 +291,101 @@
 	(modify ?ncol (num ?nc))
 	(bind ?ng (+ ?ng 1))
 	(modify ?act (n_guess ?ng))
-	(printout t "guess-from-known-right in pos [" ?x ", " ?y "] at step " ?s  crlf)
+	(printout t "guess-from-right in pos [" ?x ", " ?y "] at step " ?s  crlf)
     (pop-focus)
 )
 
+(defrule guess-down-from-known-middle (declare (salience 10))
+	(status (step ?s)(currently running))
+	?act <- (n_actions (n_guess ?ng&:(< ?ng 20)))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?parent <- (my-cell (x = (- ?x 1))(y ?y) (content ~water))
+	?child <- (my-cell (x = (+ ?x 1)) (y ?y) (content unknown) )
+	?nrow <- (k-per-row (row =(+ ?x 1)) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+	(not (exec (action guess) (x = (+ ?x 1)) (y ?y)))
+=>
+	(bind ?x (+ ?x 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?child (content boat) )
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	(bind ?ng (+ ?ng 1))
+	(modify ?act (n_guess ?ng))
+	(printout t "guess-down-from-middle in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+(defrule guess-up-from-known-middle (declare (salience 10))
+	(status (step ?s)(currently running))
+	?act <- (n_actions (n_guess ?ng&:(< ?ng 20)))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?parent <- (my-cell (x = (+ ?x 1))(y ?y) (content ~water))
+	?child <- (my-cell (x = (- ?x 1)) (y ?y) (content unknown) )
+	?nrow <- (k-per-row (row =(- ?x 1)) (num ?nr))
+	?ncol <- (k-per-col (col ?y) (num ?nc))
+	(not (exec (action guess) (x = (- ?x 1)) (y ?y)))
+=>
+	(bind ?x (- ?x 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?child (content boat) )
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	(bind ?ng (+ ?ng 1))
+	(modify ?act (n_guess ?ng))
+	(printout t "guess-up-from-middle in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+(defrule guess-left-from-known-middle (declare (salience 10))
+	(status (step ?s)(currently running))
+	?act <- (n_actions (n_guess ?ng&:(< ?ng 20)))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?parent <- (my-cell (x ?x)(y = (+ ?y 1))(content ~water))
+	?child <- (my-cell (x ?x) (y = (- ?y 1)) (content unknown) )
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col = (- ?y 1)) (num ?nc))
+	(not (exec (action guess) (x ?x) (y = (- ?y 1))))
+=>
+	(bind ?y (- ?y 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?child (content boat) )
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	(bind ?ng (+ ?ng 1))
+	(modify ?act (n_guess ?ng))
+	(printout t "guess-left-from-middle in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
+
+(defrule guess-right-from-known-middle (declare (salience 10))
+	(status (step ?s)(currently running))
+	?act <- (n_actions (n_guess ?ng&:(< ?ng 20)))
+	(k-cell (x ?x)(y ?y)(content middle))
+	?parent <- (my-cell (x ?x)(y = (- ?y 1))(content ~water))
+	?child <- (my-cell (x ?x) (y = (+ ?y 1)) (content unknown) )
+	?nrow <- (k-per-row (row ?x) (num ?nr))
+	?ncol <- (k-per-col (col = (+ ?y 1)) (num ?nc))
+	(not (exec (action guess) (x ?x) (y = (+ ?y 1))))
+=>
+	(bind ?y (+ ?y 1))
+	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
+	(modify ?child (content boat) )
+	(bind ?nr (- ?nr 1))
+	(modify ?nrow (num ?nr))
+	(bind ?nc (- ?nc 1))
+	(modify ?ncol (num ?nc))
+	(bind ?ng (+ ?ng 1))
+	(modify ?act (n_guess ?ng))
+	(printout t "guess-right-from-middle in pos [" ?x ", " ?y "] at step " ?s  crlf)
+    (pop-focus)
+)
 ; ------------------------------ FIRE ------------------------------
 (defrule fire-down-from-known-top (declare (salience 5))
 	(status (step ?s)(currently running))
@@ -327,6 +398,7 @@
 	(modify ?act (n_fire ?nf))
 	(bind ?x (+ ?x 2)) 
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	
 	(printout t "fire-down-from-top in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
@@ -342,6 +414,7 @@
 	(modify ?act (n_fire ?nf))
 	(bind ?x (- ?x 2)) 
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	
 	(printout t "fire-up-from-bot in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
@@ -357,6 +430,7 @@
 	(modify ?act (n_fire ?nf))
 	(bind ?y (- ?y 2)) 
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	
 	(printout t "fire-left-from-right in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
@@ -372,6 +446,7 @@
 	(modify ?act (n_fire ?nf))
 	(bind ?y (+ ?y 2)) 
 	(assert (exec (step ?s) (action fire) (x ?x) (y ?y)))
+	
 	(printout t "fire-right-from-left in pos [" ?x ", " ?y "] at step " ?s crlf)
 	(pop-focus)
 )
@@ -394,15 +469,14 @@
 )
 
 ; ------------------------------ SOLVE ------------------------------
-
 (defrule guess-most-likelihood-cell (declare (salience 2))
-	(status (step ?s)(currently running))
+    (status (step ?s)(currently running))
 	?act <- (n_actions (n_guess ?ng&:(< ?ng 20)))
 	?nrow <- (k-per-row (row ?r) (num ?nr))
 	?ncol <- (k-per-col (col ?c) (num ?nc))
     (not (k-per-row (row ?r2&:(neq ?r2 ?r)) (num ?n2 &:(> ?n2 ?nr))))
 	(not (k-per-col (col ?c2&:(neq ?c2 ?c)) (num ?m2 &:(> ?m2 ?nc))))
-    (my-cell (x ?r) (y ?c)(content ~water))
+    (my-cell (x ?r) (y ?c) (content ~water))
     (not (exec (action guess) (x ?r) (y ?c)))
 =>
     (assert (exec (step ?s) (action guess) (x ?r) (y ?c)))
@@ -417,13 +491,11 @@
 )
 
 (defrule guess-what-remains
-	(status (step ?s)(currently running))
 	?act <- (n_actions (n_guess ?ng&:(< ?ng 20)))
+	(status (step ?s)(currently running))
 	(my-cell (x ?x) (y ?y) (content ~water))
 	?nrow <- (k-per-row (row ?x) (num ?nr))
 	?ncol <- (k-per-col (col ?y) (num ?nc))
-	(test (> ?nr 0))
-	(test (> ?nc 0))
 	(not (exec (action guess) (x ?x) (y ?y)))
 =>
 	(assert (exec (step ?s) (action guess) (x ?x) (y ?y)))
